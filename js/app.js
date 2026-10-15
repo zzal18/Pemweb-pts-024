@@ -2,7 +2,8 @@
 const API_URL = "https://dummyjson.com/products/category/groceries?limit=100";
 const USD_TO_IDR = 16000;
 const SEARCH_DELAY = 400;
-const FAVORITES_KEY = "stokme-favorites"; // BARU
+const FAVORITES_KEY = "stokme-favorites";
+const MIN_NAME_LENGTH = 3; // BARU
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -55,14 +56,18 @@ const TAG_LABELS = {
     "cooking essentials": "Kebutuhan Masak"
 };
 
-// ===== 2. Referensi elemen DOM (semua di luar fungsi) =====
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error");
 const productListEl = document.getElementById("product-list");
-const favoriteListEl = document.getElementById("favorite-list"); // BARU
+const favoriteListEl = document.getElementById("favorite-list");
 const searchFormEl = document.getElementById("search-form");
 const searchInputEl = document.getElementById("search-input");
 const resultCountEl = document.getElementById("result-count");
+const marginFormEl = document.getElementById("margin-form");   
+const itemNameEl = document.getElementById("item-name");       
+const buyPriceEl = document.getElementById("buy-price");       
+const sellPriceEl = document.getElementById("sell-price");     
+const formResultEl = document.getElementById("form-success");  
 
 // ===== 3. Fungsi bantu tampilan =====
 function translateTitle(title) {
@@ -91,7 +96,7 @@ function showError(message) {
     errorEl.hidden = false;
 }
 
-// ===== 4. Favorit dengan localStorage ===== (BARU)
+// ===== 4. Favorit dengan localStorage =====
 function loadFavorites() {
     try {
         const saved = localStorage.getItem(FAVORITES_KEY);
@@ -147,7 +152,7 @@ function handleFavoriteClick(event) {
 
 // ===== 5. State aplikasi =====
 let allProducts = [];
-let favoriteIds = loadFavorites(); // BARU
+let favoriteIds = loadFavorites();
 
 // ===== 6. Render data ke DOM =====
 function createProductCard(product) {
@@ -177,7 +182,6 @@ function createProductCard(product) {
     const rating = document.createElement("p");
     rating.textContent = `Rating: ${product.rating}`;
 
-    // BARU: tombol favorit
     const favoriteButton = document.createElement("button");
     favoriteButton.type = "button";
     favoriteButton.className = "favorite-btn";
@@ -211,7 +215,7 @@ function renderProducts(products) {
     renderList(productListEl, products, "Produk tidak ditemukan.");
 }
 
-function renderFavorites() { // BARU
+function renderFavorites() {
     const favoriteProducts = allProducts.filter((product) => isFavorite(product.id));
     renderList(
         favoriteListEl,
@@ -256,7 +260,118 @@ function handleSearch() {
 
 const debouncedSearch = debounce(handleSearch, SEARCH_DELAY);
 
-// ===== 8. Mengambil data dari REST API =====
+// ===== 8. Form dan validasi (Z=4) ===== BARU
+function setFieldError(input, message) {
+    const errorMsgEl = document.getElementById(`${input.id}-error`);
+    errorMsgEl.textContent = `⚠ ${message}`;
+    input.setAttribute("aria-invalid", "true");
+    return false;
+}
+
+function clearFieldError(input) {
+    const errorMsgEl = document.getElementById(`${input.id}-error`);
+    errorMsgEl.textContent = "";
+    input.removeAttribute("aria-invalid");
+    return true;
+}
+
+function validateItemName() {
+    const value = itemNameEl.value.trim();
+    if (value === "") {
+        return setFieldError(itemNameEl, "Nama barang wajib diisi.");
+    }
+    if (value.length < MIN_NAME_LENGTH) {
+        return setFieldError(
+            itemNameEl,
+            `Nama barang minimal ${MIN_NAME_LENGTH} karakter.`
+        );
+    }
+    return clearFieldError(itemNameEl);
+}
+
+function validatePrice(input, label) {
+    const raw = input.value.trim();
+    if (raw === "") {
+        return setFieldError(input, `${label} wajib diisi dengan angka.`);
+    }
+    if (Number(raw) <= 0) {
+        return setFieldError(input, `${label} harus lebih dari 0.`);
+    }
+    return clearFieldError(input);
+}
+
+function validateBuyPrice() {
+    return validatePrice(buyPriceEl, "Harga beli");
+}
+
+function validateSellPrice() {
+    return validatePrice(sellPriceEl, "Harga jual");
+}
+
+// Dua input yang saling berkaitan: harga jual harus lebih besar dari harga beli
+function validatePricePair() {
+    const buyPrice = Number(buyPriceEl.value);
+    const sellPrice = Number(sellPriceEl.value);
+    if (sellPrice <= buyPrice) {
+        return setFieldError(
+            sellPriceEl,
+            "Harga jual harus lebih besar dari harga beli."
+        );
+    }
+    return clearFieldError(sellPriceEl);
+}
+
+function checkPairIfReady() {
+    const bothFilled = buyPriceEl.value.trim() !== "" && sellPriceEl.value.trim() !== "";
+    if (bothFilled && validateBuyPrice() && validateSellPrice()) {
+        validatePricePair();
+    }
+}
+
+function showFormResult(message, isError) {
+    formResultEl.textContent = message;
+    formResultEl.classList.toggle("is-error", isError);
+}
+
+function calculateMargin(buyPrice, sellPrice) {
+    const marginValue = sellPrice - buyPrice;
+    const marginPercent = (marginValue / buyPrice) * 100;
+    return { marginValue, marginPercent };
+}
+
+function handleFormSubmit(event) {
+    event.preventDefault();
+    showFormResult("", false);
+
+    const nameOk = validateItemName();
+    const buyOk = validateBuyPrice();
+    const sellOk = validateSellPrice();
+    const pairOk = buyOk && sellOk ? validatePricePair() : true;
+
+    const checks = [
+        [itemNameEl, nameOk],
+        [buyPriceEl, buyOk],
+        [sellPriceEl, sellOk && pairOk]
+    ];
+    const firstInvalid = checks.find(([, isValid]) => !isValid);
+    if (firstInvalid) {
+        showFormResult("Periksa kembali isian yang bertanda ⚠.", true);
+        firstInvalid[0].focus();
+        return;
+    }
+
+    const buyPrice = Number(buyPriceEl.value);
+    const sellPrice = Number(sellPriceEl.value);
+    const { marginValue, marginPercent } = calculateMargin(buyPrice, sellPrice);
+
+    showFormResult(
+        `Berhasil! Margin ${itemNameEl.value.trim()}: ` +
+        `${rupiahFormatter.format(marginValue)} per unit (${marginPercent.toFixed(1)}%).`,
+        false
+    );
+}
+
+// ===== 9. Mengambil data dari REST API =====
 async function loadData() {
     try {
         showLoading();
@@ -271,7 +386,7 @@ async function loadData() {
             (product) => !EXCLUDED_TITLES.includes(product.title)
         );
         renderProducts(allProducts);
-        renderFavorites(); // BARU
+        renderFavorites();
         updateResultCount(allProducts.length, "");
     } catch (error) {
         showError(error.message);
@@ -280,6 +395,7 @@ async function loadData() {
     }
 }
 
+// ===== 10. Titik awal aplikasi =====
 function init() {
     loadData();
     searchInputEl.addEventListener("input", debouncedSearch);
@@ -287,8 +403,20 @@ function init() {
         event.preventDefault();
         handleSearch();
     });
-    productListEl.addEventListener("click", handleFavoriteClick); 
-    favoriteListEl.addEventListener("click", handleFavoriteClick); 
+    productListEl.addEventListener("click", handleFavoriteClick);
+    favoriteListEl.addEventListener("click", handleFavoriteClick);
+
+    // BARU: form margin
+    marginFormEl.addEventListener("submit", handleFormSubmit);
+    itemNameEl.addEventListener("blur", validateItemName);
+    buyPriceEl.addEventListener("blur", () => {
+        validateBuyPrice();
+        checkPairIfReady();
+    });
+    sellPriceEl.addEventListener("blur", () => {
+        validateSellPrice();
+        checkPairIfReady();
+    });
 }
 
 document.addEventListener("DOMContentLoaded", init);
