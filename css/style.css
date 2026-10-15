@@ -107,6 +107,20 @@ footer {
 .product-category { color: var(--color-muted); text-transform: capitalize; font-size: 0.9rem; }
 .product-price { font-weight: 700; }
 
+.favorite-btn {
+    margin-top: auto;
+    background: #fff;
+    color: var(--color-text);
+    border: 2px solid var(--color-primary);
+    font-weight: 600;
+}
+.favorite-btn:hover { background: #e5e7eb; }
+.favorite-btn[aria-pressed="true"] {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #111827;
+}
+
 fieldset {
     border: 1px solid #6b7280;
     border-radius: var(--radius);

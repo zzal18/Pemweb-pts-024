@@ -2,6 +2,7 @@
 const API_URL = "https://dummyjson.com/products/category/groceries?limit=100";
 const USD_TO_IDR = 16000;
 const SEARCH_DELAY = 400;
+const FAVORITES_KEY = "stokme-favorites"; // BARU
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -54,18 +55,16 @@ const TAG_LABELS = {
     "cooking essentials": "Kebutuhan Masak"
 };
 
-// ===== 2. State aplikasi =====
-let allProducts = [];
-
-// ===== 3. Referensi elemen DOM (semua di luar fungsi) =====
+// ===== 2. Referensi elemen DOM (semua di luar fungsi) =====
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error");
 const productListEl = document.getElementById("product-list");
+const favoriteListEl = document.getElementById("favorite-list"); // BARU
 const searchFormEl = document.getElementById("search-form");
 const searchInputEl = document.getElementById("search-input");
 const resultCountEl = document.getElementById("result-count");
 
-// ===== 4. Fungsi bantu tampilan =====
+// ===== 3. Fungsi bantu tampilan =====
 function translateTitle(title) {
     return TITLE_LABELS[title] ?? title;
 }
@@ -92,7 +91,65 @@ function showError(message) {
     errorEl.hidden = false;
 }
 
-// ===== 5. Render data ke DOM =====
+// ===== 4. Favorit dengan localStorage ===== (BARU)
+function loadFavorites() {
+    try {
+        const saved = localStorage.getItem(FAVORITES_KEY);
+        const parsed = saved ? JSON.parse(saved) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.warn("Gagal membaca favorit:", error.message);
+        return [];
+    }
+}
+
+function saveFavorites() {
+    try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteIds));
+    } catch (error) {
+        console.warn("Gagal menyimpan favorit:", error.message);
+    }
+}
+
+function isFavorite(id) {
+    return favoriteIds.includes(id);
+}
+
+function setFavoriteButtonState(button, active) {
+    button.setAttribute("aria-pressed", String(active));
+    button.textContent = active ? "★ Prioritas" : "☆ Prioritas";
+}
+
+function syncFavoriteButtons() {
+    productListEl.querySelectorAll(".favorite-btn").forEach((button) => {
+        setFavoriteButtonState(button, isFavorite(Number(button.dataset.id)));
+    });
+}
+
+function toggleFavorite(id) {
+    if (isFavorite(id)) {
+        favoriteIds = favoriteIds.filter((favoriteId) => favoriteId !== id);
+    } else {
+        favoriteIds = [...favoriteIds, id];
+    }
+    saveFavorites();
+    syncFavoriteButtons();
+    renderFavorites();
+}
+
+function handleFavoriteClick(event) {
+    const button = event.target.closest(".favorite-btn");
+    if (!button) {
+        return;
+    }
+    toggleFavorite(Number(button.dataset.id));
+}
+
+// ===== 5. State aplikasi =====
+let allProducts = [];
+let favoriteIds = loadFavorites(); // BARU
+
+// ===== 6. Render data ke DOM =====
 function createProductCard(product) {
     const name = translateTitle(product.title);
 
@@ -120,18 +177,26 @@ function createProductCard(product) {
     const rating = document.createElement("p");
     rating.textContent = `Rating: ${product.rating}`;
 
-    card.append(image, title, category, price, rating);
+    // BARU: tombol favorit
+    const favoriteButton = document.createElement("button");
+    favoriteButton.type = "button";
+    favoriteButton.className = "favorite-btn";
+    favoriteButton.dataset.id = product.id;
+    favoriteButton.setAttribute("aria-label", `Prioritaskan ${name}`);
+    setFavoriteButtonState(favoriteButton, isFavorite(product.id));
+
+    card.append(image, title, category, price, rating, favoriteButton);
     item.append(card);
     return item;
 }
 
-function renderProducts(products) {
-    productListEl.replaceChildren();
+function renderList(listEl, products, emptyMessage) {
+    listEl.replaceChildren();
 
     if (products.length === 0) {
         const empty = document.createElement("li");
-        empty.textContent = "Produk tidak ditemukan.";
-        productListEl.append(empty);
+        empty.textContent = emptyMessage;
+        listEl.append(empty);
         return;
     }
 
@@ -139,10 +204,23 @@ function renderProducts(products) {
     products.forEach((product) => {
         fragment.append(createProductCard(product));
     });
-    productListEl.append(fragment);
+    listEl.append(fragment);
 }
 
-// ===== 6. Pencarian dengan debounce =====
+function renderProducts(products) {
+    renderList(productListEl, products, "Produk tidak ditemukan.");
+}
+
+function renderFavorites() { // BARU
+    const favoriteProducts = allProducts.filter((product) => isFavorite(product.id));
+    renderList(
+        favoriteListEl,
+        favoriteProducts,
+        "Belum ada produk prioritas. Klik tombol Prioritas pada kartu produk."
+    );
+}
+
+// ===== 7. Pencarian dengan debounce =====
 function debounce(callback, delay) {
     let timerId;
     return function (...args) {
@@ -178,7 +256,7 @@ function handleSearch() {
 
 const debouncedSearch = debounce(handleSearch, SEARCH_DELAY);
 
-// ===== 7. Mengambil data dari REST API =====
+// ===== 8. Mengambil data dari REST API =====
 async function loadData() {
     try {
         showLoading();
@@ -193,6 +271,7 @@ async function loadData() {
             (product) => !EXCLUDED_TITLES.includes(product.title)
         );
         renderProducts(allProducts);
+        renderFavorites(); // BARU
         updateResultCount(allProducts.length, "");
     } catch (error) {
         showError(error.message);
@@ -201,7 +280,6 @@ async function loadData() {
     }
 }
 
-// ===== 8. Titik awal aplikasi =====
 function init() {
     loadData();
     searchInputEl.addEventListener("input", debouncedSearch);
@@ -209,6 +287,8 @@ function init() {
         event.preventDefault();
         handleSearch();
     });
+    productListEl.addEventListener("click", handleFavoriteClick); 
+    favoriteListEl.addEventListener("click", handleFavoriteClick); 
 }
 
 document.addEventListener("DOMContentLoaded", init);
