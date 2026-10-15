@@ -73,7 +73,7 @@ NPM berakhir **024**, sehingga **X = 0, Y = 2, Z = 4**.
 |---|---|
 | Penyedia | DummyJSON |
 | Method | GET |
-| Endpoint | `https://dummyjson.com/products?limit=100` |
+| Endpoint | `https://dummyjson.com/products/category/groceries?limit=100` |
 | Parameter | `limit=100` (bawaan hanya 30 produk, diminta 100 agar pencarian dan statistik punya data cukup) |
 | Format respons | JSON, array produk ada di properti `products` |
 | Fungsi pemanggil | `loadData()` di `js/app.js` |
@@ -105,6 +105,22 @@ dan pesan error ditampilkan.
   menampilkan "Gagal memuat data: HTTP Error: 404".
 - Pada semua kasus, blok `finally` menjalankan `hideLoading()` sehingga indikator
   loading tidak menggantung.
+
+### 5. Fitur berdasarkan digit Y (Favorite/Bookmark)
+Setiap kartu produk memiliki tombol "Prioritas". Satu event listener `click` dipasang pada
+`#product-list` dan `#favorite-list` (event delegation) yang memanggil `handleFavoriteClick()`.
+Fungsi ini mencari tombol dengan `closest(".favorite-btn")`, lalu memanggil `toggleFavorite(id)`
+yang menambah atau menghapus ID produk di array `favoriteIds`. Setelah itu `saveFavorites()`
+menyimpan ke localStorage, `syncFavoriteButtons()` memperbarui tampilan tombol, dan
+`renderFavorites()` menampilkan ulang section Produk Prioritas.
+
+### 7. Penggunaan localStorage
+Data yang disimpan adalah array ID produk favorit dengan key `stokme-favorites`
+(contoh `[38,23]`) dalam format JSON. Data dibaca satu kali saat aplikasi dimuat lewat
+`loadFavorites()`, dan ditulis setiap kali pengguna menandai atau melepas favorit lewat
+`saveFavorites()`. Alasannya agar daftar prioritas tidak hilang ketika halaman di-refresh atau
+browser ditutup. Hanya ID yang disimpan, bukan seluruh data produk, karena data produk selalu
+diambil terbaru dari API.
 
 ## AI Usage Log
 
