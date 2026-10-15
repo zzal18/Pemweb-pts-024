@@ -3,7 +3,8 @@ const API_URL = "https://dummyjson.com/products/category/groceries?limit=100";
 const USD_TO_IDR = 16000;
 const SEARCH_DELAY = 400;
 const FAVORITES_KEY = "stokme-favorites";
-const MIN_NAME_LENGTH = 3; // BARU
+const MIN_NAME_LENGTH = 3;
+const LOW_STOCK_LIMIT = 10; // BARU: stok <= 10 dianggap menipis
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -56,18 +57,20 @@ const TAG_LABELS = {
     "cooking essentials": "Kebutuhan Masak"
 };
 
+// ===== 2. Referensi elemen DOM (semua di luar fungsi) =====
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error");
+const statsContentEl = document.getElementById("stats-content"); // BARU
 const productListEl = document.getElementById("product-list");
 const favoriteListEl = document.getElementById("favorite-list");
 const searchFormEl = document.getElementById("search-form");
 const searchInputEl = document.getElementById("search-input");
 const resultCountEl = document.getElementById("result-count");
-const marginFormEl = document.getElementById("margin-form");   
-const itemNameEl = document.getElementById("item-name");       
-const buyPriceEl = document.getElementById("buy-price");       
-const sellPriceEl = document.getElementById("sell-price");     
-const formResultEl = document.getElementById("form-success");  
+const marginFormEl = document.getElementById("margin-form");
+const itemNameEl = document.getElementById("item-name");
+const buyPriceEl = document.getElementById("buy-price");
+const sellPriceEl = document.getElementById("sell-price");
+const formResultEl = document.getElementById("form-success");
 
 // ===== 3. Fungsi bantu tampilan =====
 function translateTitle(title) {
@@ -85,10 +88,26 @@ function formatPrice(usdValue) {
 function showLoading() {
     loadingEl.hidden = false;
     errorEl.hidden = true;
+    productListEl.setAttribute("aria-busy", "true"); // BARU
 }
 
 function hideLoading() {
     loadingEl.hidden = true;
+    productListEl.setAttribute("aria-busy", "false"); // BARU
+}
+
+// BARU: pesan error yang mudah dipahami
+function getErrorMessage(error) {
+    if (error instanceof TypeError) {
+        return "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.";
+    }
+    if (error.message.includes("404")) {
+        return "Data tidak ditemukan di server (HTTP 404).";
+    }
+    if (error.message.includes("500")) {
+        return "Server sedang bermasalah (HTTP 500). Coba lagi nanti.";
+    }
+    return error.message;
 }
 
 function showError(message) {
@@ -224,7 +243,70 @@ function renderFavorites() {
     );
 }
 
-// ===== 7. Pencarian dengan debounce =====
+// ===== 7. Analisis data (statistik) ===== BARU
+function calculateStats(products) {
+    if (products.length === 0) {
+        return null;
+    }
+    const totalPrice = products.reduce((sum, product) => sum + product.price, 0);
+    const mostExpensive = products.reduce((max, product) =>
+        product.price > max.price ? product : max
+    );
+    const totalStock = products.reduce((sum, product) => sum + product.stock, 0);
+    const lowStockCount = products.filter(
+        (product) => product.stock <= LOW_STOCK_LIMIT
+    ).length;
+
+    return {
+        averagePrice: totalPrice / products.length,
+        mostExpensive,
+        totalStock,
+        lowStockCount
+    };
+}
+
+function createStatItem(label, value) {
+    const item = document.createElement("li");
+    item.className = "stat-item";
+
+    const labelEl = document.createElement("p");
+    labelEl.className = "stat-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("p");
+    valueEl.className = "stat-value";
+    valueEl.textContent = value;
+
+    item.append(labelEl, valueEl);
+    return item;
+}
+
+function renderStats(products) {
+    statsContentEl.replaceChildren();
+    const stats = calculateStats(products);
+
+    if (!stats) {
+        const empty = document.createElement("li");
+        empty.textContent = "Statistik belum tersedia.";
+        statsContentEl.append(empty);
+        return;
+    }
+
+    statsContentEl.append(
+        createStatItem("Rata-rata harga", formatPrice(stats.averagePrice)),
+        createStatItem(
+            "Produk termahal",
+            `${translateTitle(stats.mostExpensive.title)} (${formatPrice(stats.mostExpensive.price)})`
+        ),
+        createStatItem("Total stok", `${stats.totalStock.toLocaleString("id-ID")} unit`),
+        createStatItem(
+            "Stok menipis",
+            `${stats.lowStockCount} produk (stok ${LOW_STOCK_LIMIT} atau kurang)`
+        )
+    );
+}
+
+// ===== 8. Pencarian dengan debounce =====
 function debounce(callback, delay) {
     let timerId;
     return function (...args) {
@@ -260,7 +342,7 @@ function handleSearch() {
 
 const debouncedSearch = debounce(handleSearch, SEARCH_DELAY);
 
-// ===== 8. Form dan validasi (Z=4) ===== BARU
+// ===== 9. Form dan validasi (Z=4) =====
 function setFieldError(input, message) {
     const errorMsgEl = document.getElementById(`${input.id}-error`);
     errorMsgEl.textContent = `⚠ ${message}`;
@@ -371,7 +453,7 @@ function handleFormSubmit(event) {
     );
 }
 
-// ===== 9. Mengambil data dari REST API =====
+// ===== 10. Mengambil data dari REST API =====
 async function loadData() {
     try {
         showLoading();
@@ -382,20 +464,28 @@ async function loadData() {
         }
 
         const data = await response.json();
+
+        // BARU: pastikan bentuk data sesuai harapan
+        if (!Array.isArray(data.products)) {
+            throw new Error("Format data dari server tidak sesuai.");
+        }
+
         allProducts = data.products.filter(
             (product) => !EXCLUDED_TITLES.includes(product.title)
         );
+        renderStats(allProducts); // BARU
         renderProducts(allProducts);
         renderFavorites();
         updateResultCount(allProducts.length, "");
     } catch (error) {
-        showError(error.message);
+        showError(getErrorMessage(error)); // BARU
+        renderStats([]);                   // BARU
     } finally {
         hideLoading();
     }
 }
 
-// ===== 10. Titik awal aplikasi =====
+// ===== 11. Titik awal aplikasi =====
 function init() {
     loadData();
     searchInputEl.addEventListener("input", debouncedSearch);
@@ -406,7 +496,6 @@ function init() {
     productListEl.addEventListener("click", handleFavoriteClick);
     favoriteListEl.addEventListener("click", handleFavoriteClick);
 
-    // BARU: form margin
     marginFormEl.addEventListener("submit", handleFormSubmit);
     itemNameEl.addEventListener("blur", validateItemName);
     buyPriceEl.addEventListener("blur", () => {
