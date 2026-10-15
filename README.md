@@ -78,6 +78,13 @@ NPM berakhir **024**, sehingga **X = 0, Y = 2, Z = 4**.
 | Format respons | JSON, array produk ada di properti `products` |
 | Fungsi pemanggil | `loadData()` di `js/app.js` |
 
+## Analisis Data (dihitung dengan JavaScript)
+Fungsi `calculateStats()` memakai `reduce()` dan `filter()` pada array produk:
+- Rata-rata harga
+- Produk termahal
+- Total stok
+- Jumlah produk dengan stok menipis (stok <= 10)
+
 
 ## Jawaban Pertanyaan Penjelasan Kode
 
@@ -122,6 +129,15 @@ Data yang disimpan adalah array ID produk favorit dengan key `stokme-favorites`
 browser ditutup. Hanya ID yang disimpan, bukan seluruh data produk, karena data produk selalu
 diambil terbaru dari API.
 
+### 9. Bug tersulit
+Produk tidak tampil sama sekali dan tidak ada pesan error di layar. Penyebabnya, deklarasi
+`const searchInputEl` dan teman-temannya tertempel di dalam fungsi `renderProducts`, sehingga
+hanya berlaku di dalam fungsi itu (scope lokal). Ketika `init()` memakainya, terjadi
+`ReferenceError` sehingga `loadData()` tidak pernah dipanggil. Saya menemukannya lewat tab
+Console di DevTools yang menampilkan nama error dan nomor barisnya. Perbaikannya
+memindahkan semua referensi DOM ke luar fungsi (scope global) dan menyusun ulang kurung
+kurawal yang tidak seimbang.
+
 ## AI Usage Log
 
 | Tanggal | AI/Tool | Tujuan | Prompt/Ringkasan | Bagian Digunakan | Verifikasi/Modifikasi |
@@ -132,3 +148,4 @@ diambil terbaru dari API.
 | 15 Okt 2026 | Claude | Menyusun konfigurasi API dan fungsi pengambilan data | Meminta panduan fetch, async/await, response.ok, try...catch | js/app.js (loadData, showLoading, showError) | Dijalankan di browser, dicek di Console dan tab Network (status 200), diuji error dengan endpoint yang sengaja dibuat salah (404) |
 | 15 Okt 2026 | Claude | Membuat fitur favorit dengan localStorage | Meminta panduan localStorage, JSON, dan event delegation | js/app.js (loadFavorites, saveFavorites, toggleFavorite, handleFavoriteClick), css/style.css | Diuji klik dan refresh, keyboard (Tab, Enter), cek di DevTools Application, uji data localStorage rusak |
 | 15 Okt 2026 | Claude | Membuat form hitung margin dan validasi dua input berkaitan | Meminta panduan validasi JavaScript, aria-invalid, dan preventDefault | js/app.js (handleFormSubmit, validatePricePair, dll.), index.html, css/style.css | Diuji semua kombinasi isian (kosong, nol, jual <= beli, valid), keyboard, dan pesan error terbaca tanpa warna |
+| 15 Okt 2026 | Claude | Membuat statistik data dan penanganan error | Meminta panduan reduce, filter, dan pesan error berbeda untuk TypeError dan HTTP error | js/app.js (calculateStats, renderStats, getErrorMessage), css/style.css | Diuji dengan endpoint salah (404), mode Offline, throttling Slow 3G, dan dicek angka statistik dengan menghitung manual |
