@@ -81,7 +81,7 @@ Pemweb-pts-024/
 1. Clone repository:
 ```bash
    git clone https://github.com/zzal18/Pemweb-pts-024.git
-   cd Pmweb-pts-024
+   cd Pemweb-pts-024
 ```
 2. Buka `index.html` di browser, atau jalankan dengan web server lokal (Laragon atau Live Server).
 3. Pastikan terhubung ke internet karena data diambil dari REST API.
