@@ -57,12 +57,54 @@ NPM berakhir **024**, sehingga **X = 0, Y = 2, Z = 4**.
 
 ## Cara Menjalankan
 
+1. Clone repository:
+```bash
+   git clone https://github.com/zzal18/Pemweb-pts-024.git
+   cd Pemweb-pts-024
+```
+2. Buka `index.html` di browser, atau jalankan lewat web server lokal
+   (Laragon atau ekstensi Live Server di VS Code).
+3. Pastikan perangkat terhubung ke internet, karena data produk diambil dari REST API DummyJSON.
+4. Tidak perlu instalasi paket apa pun (tanpa framework dan library).
 
 ## Endpoint REST API
 
+| Keterangan | Detail |
+|---|---|
+| Penyedia | DummyJSON |
+| Method | GET |
+| Endpoint | `https://dummyjson.com/products?limit=100` |
+| Parameter | `limit=100` (bawaan hanya 30 produk, diminta 100 agar pencarian dan statistik punya data cukup) |
+| Format respons | JSON, array produk ada di properti `products` |
+| Fungsi pemanggil | `loadData()` di `js/app.js` |
 
-## Screenshot
 
+## Jawaban Pertanyaan Penjelasan Kode
+
+### 1. Alur dari halaman dibuka sampai data tampil
+Saat halaman selesai dimuat, event `DOMContentLoaded` memanggil fungsi `init()`.
+`init()` memanggil `loadData()`. Fungsi ini menampilkan loading (`showLoading()`),
+mengirim permintaan dengan `fetch(API_URL)`, memeriksa `response.ok`, mengubah
+respons menjadi objek dengan `response.json()`, lalu menyimpan array produk ke
+variabel `allProducts`. Setelah itu loading disembunyikan (`hideLoading()`).
+(Tahap render ke layar ditambahkan di Langkah 4: `renderProducts()`.)
+
+### 2. Mengapa response.ok tetap diperiksa
+`fetch()` hanya menolak (reject) saat terjadi gangguan jaringan. Jika server
+membalas 404 atau 500, `fetch()` tetap dianggap berhasil. Tanpa pemeriksaan
+`response.ok`, aplikasi akan mencoba membaca respons error sebagai data produk.
+Pada STOKME, jika endpoint salah ketik (misalnya `/productss`), server membalas 404,
+`response.ok` bernilai false, lalu `throw new Error` memindahkan alur ke `catch`
+dan pesan error ditampilkan.
+
+### 4. Jika internet terputus, endpoint salah, atau HTTP 404/500
+- Internet terputus: `fetch()` menolak, alur masuk ke `catch`, `showError()`
+  menampilkan pesan.
+- Endpoint salah atau server membalas 404/500: `response.ok` bernilai false,
+  dilempar `Error` berisi kode status, ditangkap `catch`, lalu `showError()`
+  menampilkan "Gagal memuat data: HTTP Error: 404".
+- Pada semua kasus, blok `finally` menjalankan `hideLoading()` sehingga indikator
+  loading tidak menggantung.
 
 ## AI Usage Log
 
@@ -71,3 +113,4 @@ NPM berakhir **024**, sehingga **X = 0, Y = 2, Z = 4**.
 | 15 Okt 2026 | Claude | Memahami soal PTS dan menentukan varian NIM | Meminta ringkasan soal dan perhitungan varian dari NIM | Perhitungan varian di README | Dihitung ulang sendiri dan dicocokkan dengan tabel pada soal |
 | 15 Okt 2026 | Claude | Menyusun struktur project dan HTML semantik | Meminta panduan langkah demi langkah dan struktur file | index.html, struktur folder | Dipelajari tiap elemen, nama aplikasi dan identitas diisi sendiri |
 | 15 Okt 2026 | Claude | Menyusun CSS responsive dan tema | Meminta panduan CSS responsive dengan tema abu-abu hitam | css/style.css | Diuji di DevTools (375px, 768px, 1280px), warna disesuaikan |
+| 15 Okt 2026 | Claude | Menyusun konfigurasi API dan fungsi pengambilan data | Meminta panduan fetch, async/await, response.ok, try...catch | js/app.js (loadData, showLoading, showError) | Dijalankan di browser, dicek di Console dan tab Network (status 200), diuji error dengan endpoint yang sengaja dibuat salah (404) |
