@@ -1,6 +1,7 @@
 // ===== 1. Konfigurasi =====
 const API_URL = "https://dummyjson.com/products/category/groceries?limit=100";
 const USD_TO_IDR = 16000;
+const SEARCH_DELAY = 400;
 
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -53,12 +54,18 @@ const TAG_LABELS = {
     "cooking essentials": "Kebutuhan Masak"
 };
 
+// ===== 2. State aplikasi =====
 let allProducts = [];
 
+// ===== 3. Referensi elemen DOM (semua di luar fungsi) =====
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error");
 const productListEl = document.getElementById("product-list");
+const searchFormEl = document.getElementById("search-form");
+const searchInputEl = document.getElementById("search-input");
+const resultCountEl = document.getElementById("result-count");
 
+// ===== 4. Fungsi bantu tampilan =====
 function translateTitle(title) {
     return TITLE_LABELS[title] ?? title;
 }
@@ -85,6 +92,7 @@ function showError(message) {
     errorEl.hidden = false;
 }
 
+// ===== 5. Render data ke DOM =====
 function createProductCard(product) {
     const name = translateTitle(product.title);
 
@@ -134,6 +142,43 @@ function renderProducts(products) {
     productListEl.append(fragment);
 }
 
+// ===== 6. Pencarian dengan debounce =====
+function debounce(callback, delay) {
+    let timerId;
+    return function (...args) {
+        clearTimeout(timerId);
+        timerId = setTimeout(() => callback.apply(this, args), delay);
+    };
+}
+
+function filterProducts(keyword) {
+    const query = keyword.trim().toLowerCase();
+    if (query === "") {
+        return allProducts;
+    }
+    return allProducts.filter((product) => {
+        const indonesianName = translateTitle(product.title).toLowerCase();
+        const originalName = product.title.toLowerCase();
+        return indonesianName.includes(query) || originalName.includes(query);
+    });
+}
+
+function updateResultCount(count, keyword) {
+    const query = keyword.trim();
+    resultCountEl.textContent = query === ""
+        ? `Menampilkan ${count} produk`
+        : `Ditemukan ${count} produk untuk "${query}"`;
+}
+
+function handleSearch() {
+    const results = filterProducts(searchInputEl.value);
+    renderProducts(results);
+    updateResultCount(results.length, searchInputEl.value);
+}
+
+const debouncedSearch = debounce(handleSearch, SEARCH_DELAY);
+
+// ===== 7. Mengambil data dari REST API =====
 async function loadData() {
     try {
         showLoading();
@@ -148,6 +193,7 @@ async function loadData() {
             (product) => !EXCLUDED_TITLES.includes(product.title)
         );
         renderProducts(allProducts);
+        updateResultCount(allProducts.length, "");
     } catch (error) {
         showError(error.message);
     } finally {
@@ -155,8 +201,14 @@ async function loadData() {
     }
 }
 
+// ===== 8. Titik awal aplikasi =====
 function init() {
     loadData();
+    searchInputEl.addEventListener("input", debouncedSearch);
+    searchFormEl.addEventListener("submit", (event) => {
+        event.preventDefault();
+        handleSearch();
+    });
 }
 
 document.addEventListener("DOMContentLoaded", init);

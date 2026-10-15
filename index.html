@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="STOKME, dashboard stok untuk toko kecil">
+    <title>STOKME - Dashboard Stok Toko</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Lewati ke konten utama</a>
+
+<header class="site-header">
+    <h1>STOKME</h1>
+    <p>Dashboard stok untuk toko kecil</p>
+    <p class="identity">Muhammad Rizal - NPM 2440304024</p>
+
+    <nav aria-label="Navigasi utama">
+        <ul class="nav-list">
+            <li><a href="#stats">Ringkasan</a></li>
+            <li><a href="#products">Produk</a></li>
+            <li><a href="#favorites">Prioritas</a></li>
+            <li><a href="#margin">Hitung Margin</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main id="main-content">
+    <section id="stats" aria-labelledby="stats-title">
+        <h2 id="stats-title">Ringkasan Data</h2>
+        <ul id="stats-content" class="stat-grid"></ul>
+    </section>
+
+    <section id="products" aria-labelledby="products-title">
+        <h2 id="products-title">Daftar Produk</h2>
+
+    <form role="search" class="search-form" id="search-form" aria-label="Cari produk">
+    <label for="search-input">Cari produk</label>
+    <input type="search" id="search-input" name="q"
+        placeholder="Ketik nama produk, misalnya beras..." autocomplete="off">
+</form>
+
+<p id="result-count" aria-live="polite"></p>
+
+<p id="loading" role="status" hidden>
+    <span class="spinner" aria-hidden="true"></span>
+    Memuat data produk...
+</p>
+<p id="error" role="alert" hidden></p>
+
+        <ul id="product-list" class="card-grid"></ul>
+    </section>
+
+    <section id="favorites" aria-labelledby="fav-title">
+        <h2 id="fav-title">Produk Prioritas</h2>
+        <ul id="favorite-list" class="card-grid"></ul>
+    </section>
+
+    <section id="margin" aria-labelledby="margin-title">
+        <h2 id="margin-title">Hitung Margin</h2>
+
+        <form id="margin-form" novalidate>
+            <fieldset>
+                <legend>Data barang</legend>
+
+                <label for="item-name">Nama barang</label>
+                <input type="text" id="item-name" name="itemName"
+                        aria-describedby="item-name-error" required>
+                <small class="error-msg" id="item-name-error" role="alert"></small>
+
+                <label for="buy-price">Harga beli (Rp)</label>
+                <input type="number" id="buy-price" name="buyPrice" step="0.01" min="0"
+                        aria-describedby="buy-price-error" required>
+                <small class="error-msg" id="buy-price-error" role="alert"></small>
+
+                <label for="sell-price">Harga jual (Rp)</label>
+                <input type="number" id="sell-price" name="sellPrice" step="0.01" min="0"
+                        aria-describedby="sell-price-error" required>
+                <small class="error-msg" id="sell-price-error" role="alert"></small>
+            </fieldset>
+
+            <button type="submit">Hitung</button>
+            <output id="form-success" for="item-name buy-price sell-price"></output>
+        </form>
+    </section>
+</main>
+
+<footer>
+    <p><small>Muhammad Rizal | NPM 2440304024 | Kelas A1</small></p>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
