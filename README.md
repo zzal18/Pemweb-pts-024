@@ -69,11 +69,10 @@ HTML5 (semantic HTML), CSS3 (Flexbox, Grid, media query, CSS variables), Vanilla
 
 ```
 Pemweb-pts-024/
-├── index.html
 ├── css/style.css
+├── Gambar/.gitignore/Desktop1.png/Desktop2.png/Desktop3.png/Mobile.png
 ├── js/app.js
-├── screenshots/
-├── .gitignore
+├── index.html
 └── README.md
 ```
 
@@ -81,8 +80,8 @@ Pemweb-pts-024/
 
 1. Clone repository:
 ```bash
-   git clone https://github.com/USERNAME/NAMA-REPO.git
-   cd NAMA-REPO
+   git clone https://github.com/zzal18/Pemweb-pts-024.git
+   cd Pmweb-pts-024
 ```
 2. Buka `index.html` di browser, atau jalankan dengan web server lokal (Laragon atau Live Server).
 3. Pastikan terhubung ke internet karena data diambil dari REST API.
